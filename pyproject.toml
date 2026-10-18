@@ -1,0 +1,23 @@
+[project]
+name = "youtube-converter"
+version = "1.0.0"
+description = "TubeShift - Open-source YouTube to MP3/MP4 Converter & Transcript Summarizer Server"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.143.3",
+    "google-genai>=2.31.0",
+    "httpx>=0.28.1",
+    "imageio-ffmpeg>=0.6.0",
+    "jinja2>=3.1.6",
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+    "python-dotenv>=1.2.4",
+    "python-multipart>=0.0.32",
+    "uvicorn>=0.54.0",
+    "youtube-transcript-api>=1.2.4",
+    "yt-dlp[default]>=2026.8.19",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]

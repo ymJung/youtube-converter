@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TubeShift | 유튜브 스크립트 정리 보관함 & MP3 · MP4 오픈소스 변환 서버</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif; }
+    .badge-glow { box-shadow: 0 0 15px rgba(16, 185, 129, 0.25); }
+    .note-glow { box-shadow: 0 0 15px rgba(168, 85, 247, 0.25); }
+    .mp4-glow { box-shadow: 0 0 15px rgba(56, 189, 248, 0.25); }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <!-- 상단 네비게이션 -->
+  <header class="border-b border-slate-800 bg-slate-900/90 backdrop-blur sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div>
+        <div class="flex items-center gap-2.5">
+          <span class="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 font-bold text-lg">🎬</span>
+          <h1 class="text-xl md:text-2xl font-extrabold tracking-tight text-white">
+            TubeShift <span class="text-emerald-400 font-semibold text-base ml-1">유튜브 스크립트 핵심 정리 & MP3 · MP4 변환 서버</span>
+          </h1>
+        </div>
+        <p class="text-xs md:text-sm text-slate-400 mt-1">
+          오픈소스 엔진: <strong class="text-purple-300">youtube-transcript-api + Gemini 2.5</strong> · <strong class="text-emerald-300">yt-dlp + FFmpeg 7.0</strong> · 전용 프로토콜: <strong class="text-sky-300">Port {{ port }} + 텔레그램 Bot 3(@soracrabsss_bot)</strong>
+        </p>
+      </div>
+      <div class="flex flex-wrap items-center gap-2.5">
+        <a href="#notes-section"
+          class="px-3.5 py-2 rounded-lg bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/40 text-xs md:text-sm font-semibold text-purple-300 transition flex items-center gap-1.5">
+          <span>📚</span> <span>스크립트 정리 노트 보관함 ({{ stats.notes_count }})</span>
+        </a>
+        <a href="/api/protocol" target="_blank"
+          class="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs md:text-sm font-medium text-slate-200 transition flex items-center gap-1.5">
+          <span>📡</span> <span>서버 프로토콜 명세</span>
+        </a>
+        <button onclick="openTelegramBotMenu()" id="btn-tg-menu"
+          class="px-3.5 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-xs md:text-sm font-semibold text-white shadow-lg shadow-sky-600/25 transition flex items-center gap-1.5">
+          <span>✈️</span> <span>텔레그램 봇3(@soracrabsss_bot) 앱 버튼 열기</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 py-6 space-y-8">
+    <!-- 알림 배너 -->
+    <div id="toast-box" class="hidden rounded-xl border p-4 text-sm font-medium"></div>
+
+    <!-- 상단 KPI 요약 카드 -->
+    <section class="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div class="rounded-xl bg-purple-950/40 border border-purple-500/40 p-4 note-glow">
+        <p class="text-xs text-purple-300 font-semibold">📚 스크립트 정리 노트 보관함</p>
+        <p class="text-2xl font-extrabold text-purple-400 mt-1">{{ stats.notes_count }}<span class="text-sm font-normal text-purple-300 ml-1">건</span></p>
+        <p class="text-[11px] text-purple-300/80 mt-1">원할 때 언제든 요약·대본 열람</p>
+      </div>
+      <div class="rounded-xl bg-emerald-950/40 border border-emerald-500/40 p-4 badge-glow">
+        <p class="text-xs text-emerald-300 font-semibold">🎵 MP3 오디오 추출</p>
+        <p class="text-2xl font-extrabold text-emerald-400 mt-1">{{ stats.mp3_count }}<span class="text-sm font-normal text-emerald-300 ml-1">건</span></p>
+        <p class="text-[11px] text-emerald-300/80 mt-1">최대 320kbps 고음질 음원</p>
+      </div>
+      <div class="rounded-xl bg-sky-950/40 border border-sky-500/40 p-4 mp4-glow">
+        <p class="text-xs text-sky-300 font-semibold">🎬 MP4 비디오 변환</p>
+        <p class="text-2xl font-extrabold text-sky-400 mt-1">{{ stats.mp4_count }}<span class="text-sm font-normal text-sky-300 ml-1">건</span></p>
+        <p class="text-[11px] text-sky-300/80 mt-1">1080p/720p H.264+AAC 병합</p>
+      </div>
+      <div class="rounded-xl bg-slate-900 border border-slate-800 p-4">
+        <p class="text-xs text-amber-300 font-medium">💾 로컬 미디어 보관 용량</p>
+        <p class="text-2xl font-bold text-amber-400 mt-1">{{ stats.total_size_human }}</p>
+        <p class="text-[11px] text-slate-400 mt-1">총 변환 {{ stats.completed_count }}건 완료</p>
+      </div>
+      <div class="rounded-xl bg-slate-900 border border-slate-800 p-4 col-span-2 md:col-span-1">
+        <p class="text-xs text-slate-300 font-medium">🔌 서버 & 텔레그램 프로토콜</p>
+        <p class="text-2xl font-bold text-white mt-1">:{{ port }} <span class="text-xs font-normal text-sky-400">Bot 3 연동</span></p>
+        <p class="text-[11px] text-slate-400 mt-1">@soracrabsss_bot 실시간 폴링</p>
+      </div>
+    </section>
+
+    <!-- 유튜브 링크 입력 & [스크립트 추출·정리 / MP3 / MP4] 통합 워크스테이션 -->
+    <section class="rounded-2xl border border-emerald-500/40 bg-slate-900/90 p-6 space-y-5 badge-glow">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2 border-b border-slate-800 pb-4">
+        <div>
+          <h2 class="text-lg font-bold text-white flex items-center gap-2">
+            <span>🚀</span> <span>유튜브 링크 워크스테이션 (📝 스크립트 추출·핵심 정리 & 🎵 MP3 / 🎬 MP4 변환)</span>
+          </h2>
+          <p class="text-xs text-slate-400 mt-1">
+            유튜브 링크를 입력하고 <strong>[📝 스크립트 추출 & AI 핵심 정리]</strong>를 누르면 오픈소스 <code>youtube-transcript-api</code>가 대본을 추출해 요약 노트를 보관함에 저장합니다.
+          </p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button type="button" onclick="fillSampleUrl()"
+            class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs text-slate-300 transition">
+            🧪 샘플 유튜브 링크 자동입력
+          </button>
+        </div>
+      </div>
+
+      <form id="convert-form" onsubmit="submitConversion(event)" class="space-y-4">
+        <div class="flex flex-col md:flex-row gap-3">
+          <div class="flex-1">
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5">🔗 유튜브 동영상 / 쇼츠 / 강의 URL</label>
+            <input type="url" id="yt-url" required
+              placeholder="https://www.youtube.com/watch?v=... 또는 https://youtu.be/..."
+              class="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-700 focus:border-emerald-500 focus:outline-none text-sm text-white placeholder-slate-500" />
+          </div>
+          <div class="flex flex-wrap items-end gap-2">
+            <button type="button" onclick="fetchVideoPreview()" id="btn-preview"
+              class="px-4 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm font-semibold text-slate-200 transition whitespace-nowrap">
+              🔍 영상 정보 미리보기
+            </button>
+            <button type="button" onclick="submitSummarize()" id="btn-summarize"
+              class="px-5 py-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-sm font-extrabold text-white shadow-lg shadow-purple-600/25 transition whitespace-nowrap flex items-center gap-1.5">
+              <span>📝</span> <span id="btn-summarize-text">스크립트 추출 & 핵심 정리 (보관함 저장)</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 스크립트 정리 추가 관점 옵션 -->
+        <div class="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+          <span class="text-xs text-purple-300 font-semibold shrink-0">💡 정리 시 중점 요청사항 (선택):</span>
+          <input type="text" id="custom-focus"
+            placeholder="예: 핵심 투자 포인트 위주로 정리해줘 / 초보자 눈높이로 3줄 요약해줘 (비워두면 표준 핵심 요약·타임라인으로 자동 정리)"
+            class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-200 placeholder-slate-500 focus:border-purple-500 focus:outline-none" />
+        </div>
+
+        <!-- 영상 미리보기 박스 -->
+        <div id="preview-box" class="hidden rounded-xl bg-slate-950 border border-slate-800 p-4">
+          <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+            <img id="preview-thumb" src="" alt="Thumbnail" class="w-40 h-24 object-cover rounded-lg border border-slate-800" />
+            <div class="space-y-1 flex-1">
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30" id="preview-id"></span>
+                <span class="px-2 py-0.5 rounded text-[11px] font-medium bg-slate-800 text-slate-300" id="preview-duration"></span>
+              </div>
+              <h3 id="preview-title" class="text-base font-bold text-white"></h3>
+              <p id="preview-uploader" class="text-xs text-slate-400"></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- MP3 / MP4 미디어 변환 옵션 선택 -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 pt-1">
+          <div class="rounded-xl bg-slate-950 border border-slate-800 p-3.5">
+            <label class="block text-xs font-bold text-slate-300 mb-2">1️⃣ 미디어 변환 포맷 선택 (MP3 / MP4)</label>
+            <div class="grid grid-cols-2 gap-2">
+              <button type="button" id="fmt-mp3-btn" onclick="selectFormat('mp3')"
+                class="px-3 py-2.5 rounded-lg text-xs font-bold border transition bg-emerald-600/20 border-emerald-500 text-emerald-300 flex items-center justify-center gap-1.5">
+                <span>🎵</span> <span>MP3 (오디오)</span>
+              </button>
+              <button type="button" id="fmt-mp4-btn" onclick="selectFormat('mp4')"
+                class="px-3 py-2.5 rounded-lg text-xs font-bold border transition bg-slate-900 border-slate-800 text-slate-400 hover:bg-slate-800 flex items-center justify-center gap-1.5">
+                <span>🎬</span> <span>MP4 (비디오)</span>
+              </button>
+            </div>
+            <input type="hidden" id="target-format" value="mp3" />
+          </div>
+
+          <div class="rounded-xl bg-slate-950 border border-slate-800 p-3.5">
+            <label class="block text-xs font-bold text-slate-300 mb-2" id="quality-label">2️⃣ 오디오 음질 (비트레이트)</label>
+            <select id="quality-select"
+              class="w-full px-3 py-2.5 rounded-lg bg-slate-900 border border-slate-700 text-xs font-semibold text-white focus:outline-none focus:border-emerald-500">
+              <option value="320">🔥 320 kbps (스튜디오 최고음질)</option>
+              <option value="192" selected>⭐ 192 kbps (표준 고음질 · 추천)</option>
+              <option value="128">⚡ 128 kbps (경량 빠른 변환)</option>
+            </select>
+          </div>
+
+          <div class="rounded-xl bg-slate-950 border border-slate-800 p-3.5 flex flex-col justify-between gap-2">
+            <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
+              <input type="checkbox" id="send-telegram" checked class="rounded bg-slate-900 border-slate-700 text-emerald-500 focus:ring-0" />
+              <span>✈️ 완료 시 텔레그램 Bot 3(`@soracrabsss_bot`) 전송</span>
+            </label>
+            <button type="submit" id="btn-convert"
+              class="w-full py-2.5 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-sm font-extrabold text-white shadow-lg shadow-emerald-600/25 transition flex items-center justify-center gap-2">
+              <span>⚡</span> <span id="btn-convert-text">MP3로 즉시 변환 시작</span>
+            </button>
+          </div>
+        </div>
+      </form>
+    </section>
+
+    <!-- 📚 스크립트 정리 노트 보관함 섹션 (원할 때 언제든 열람/검색) -->
+    <section id="notes-section" class="space-y-4 pt-2">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 border-b border-slate-800 pb-4">
+        <div>
+          <h2 class="text-lg font-extrabold text-white flex items-center gap-2">
+            <span>📚</span> <span>스크립트 핵심 정리 노트 보관함 ({{ stats.notes_count }}건)</span>
+          </h2>
+          <p class="text-xs text-slate-400 mt-0.5">
+            추출된 유튜브 스크립트와 요약 노트가 영구 보관됩니다. 원하실 때 언제든 키워드로 검색하거나 전체 대본·마크다운(`.md`)을 열람하세요.
+          </p>
+        </div>
+        <div class="flex items-center gap-2">
+          <input type="text" id="note-search-input" oninput="filterNotesByKeyword()"
+            placeholder="🔍 보관함 내 제목 · 핵심 내용 · 대본 검색..."
+            class="w-64 md:w-80 px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white placeholder-slate-400 focus:border-purple-500 focus:outline-none" />
+        </div>
+      </div>
+
+      {% if not all_notes %}
+      <div class="rounded-2xl border border-slate-800 bg-slate-900/50 p-8 text-center space-y-2">
+        <p class="text-sm font-bold text-slate-300">아직 보관함에 저장된 스크립트 정리 노트가 없습니다.</p>
+        <p class="text-xs text-slate-500">위 입력창에 유튜브 링크를 넣고 [📝 스크립트 추출 & 핵심 정리] 버튼을 누르거나 텔레그램 @soracrabsss_bot에 링크를 보내보세요!</p>
+      </div>
+      {% endif %}
+
+      <div class="space-y-4" id="notes-list">
+        {% for note in all_notes %}
+        <article class="note-card rounded-2xl border border-purple-500/40 bg-slate-900/90 p-5 space-y-4 transition"
+          data-search="{{ (note.title ~ ' ' ~ note.uploader ~ ' ' ~ note.one_line_summary ~ ' ' ~ (note.key_takeaways | join(' ')) ~ ' ' ~ note.full_transcript_text) | lower }}">
+          <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 border-b border-slate-800 pb-4">
+            <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+              {% if note.thumbnail_url %}
+              <img src="{{ note.thumbnail_url }}" alt="{{ note.title }}"
+                class="w-36 h-20 object-cover rounded-xl border border-slate-800 shrink-0" />
+              {% endif %}
+              <div class="space-y-1.5">
+                <div class="flex flex-wrap items-center gap-2">
+                  <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-500/20 text-purple-300 border border-purple-500/40">
+                    📝 스크립트 정리 노트
+                  </span>
+                  <span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-800 text-slate-300">
+                    🌐 자막 언어: {{ note.language_used }} ({{ note.segment_count }}구간)
+                  </span>
+                  <span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-800 text-emerald-300">
+                    🤖 {{ note.summarizer_engine }}
+                  </span>
+                  <span class="px-2.5 py-0.5 rounded-full text-[11px] text-slate-400 bg-slate-950 border border-slate-800">
+                    🕒 {{ note.created_at }}
+                  </span>
+                </div>
+                <h3 class="text-base md:text-lg font-bold text-white">{{ note.title }}</h3>
+                <p class="text-xs text-slate-400">
+                  채널: <strong class="text-slate-200">{{ note.uploader }}</strong> ({{ note.duration_str }}) ·
+                  <a href="{{ note.url }}" target="_blank" class="text-sky-400 hover:underline">원본 유튜브 열기 ↗</a>
+                </p>
+              </div>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2 shrink-0">
+              <a href="/api/notes/{{ note.note_id }}/markdown"
+                class="px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-xs font-bold text-white shadow-lg shadow-purple-600/20 transition flex items-center gap-1.5">
+                <span>📄</span> <span>정리노트 (.md) 다운로드</span>
+              </a>
+              <button onclick="sendNoteToTelegram('{{ note.note_id }}')"
+                class="px-3.5 py-2 rounded-xl bg-sky-600/20 hover:bg-sky-600/30 border border-sky-500/40 text-xs font-semibold text-sky-300 transition flex items-center gap-1">
+                <span>✈️</span> <span>텔레그램으로 보기</span>
+              </button>
+              <button onclick="deleteNote('{{ note.note_id }}')"
+                class="px-3 py-2 rounded-xl bg-rose-950/50 hover:bg-rose-900/60 border border-rose-500/30 text-xs font-semibold text-rose-300 transition">
+                🗑 삭제
+              </button>
+            </div>
+          </div>
+
+          <!-- 한 줄 핵심 요약 -->
+          <div class="rounded-xl bg-purple-950/30 border border-purple-500/30 p-3.5">
+            <p class="text-xs font-bold text-purple-300 mb-1">💡 한 줄 핵심 요약 (Core Overview)</p>
+            <p class="text-sm font-semibold text-white">{{ note.one_line_summary }}</p>
+          </div>
+
+          <!-- 핵심 포인트 & 타임라인 2단 그리드 -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="rounded-xl bg-slate-950 border border-slate-800 p-4 space-y-2">
+              <p class="text-xs font-bold text-emerald-400">✅ 핵심 요약 포인트 (Key Takeaways)</p>
+              <ul class="space-y-1.5 text-xs text-slate-200 list-disc list-inside">
+                {% for item in note.key_takeaways %}
+                <li>{{ item }}</li>
+                {% endfor %}
+              </ul>
+            </div>
+            <div class="rounded-xl bg-slate-950 border border-slate-800 p-4 space-y-2">
+              <p class="text-xs font-bold text-sky-400">⏱ 타임라인별 하이라이트</p>
+              <ul class="space-y-1.5 text-xs text-slate-300 font-mono">
+                {% for tl in note.timeline_highlights %}
+                <li>{{ tl }}</li>
+                {% endfor %}
+              </ul>
+            </div>
+          </div>
+
+          <!-- 상세 정리 & 전체 타임스탬프 대본 접기/펼치기 (원할 때 열람) -->
+          <details class="rounded-xl bg-slate-950 border border-slate-800 p-3.5 text-xs">
+            <summary class="cursor-pointer font-bold text-slate-300 hover:text-white select-none">
+              📖 상세 맥락 정리 & 💬 추출된 전체 타임스탬프 스크립트 원문 펼치기 ({{ note.segment_count }}구간)
+            </summary>
+            <div class="mt-3 pt-3 border-t border-slate-800 space-y-4">
+              <div>
+                <p class="font-bold text-purple-300 mb-1.5">📌 상세 정리 내용</p>
+                <div class="whitespace-pre-wrap text-slate-200 leading-relaxed bg-slate-900/70 p-3 rounded-lg border border-slate-800">{{ note.detailed_summary_md }}</div>
+              </div>
+              <div>
+                <p class="font-bold text-emerald-300 mb-1.5">💬 타임스탬프 스크립트 원문</p>
+                <pre class="whitespace-pre-wrap text-slate-300 font-mono bg-slate-900/90 p-3 rounded-lg border border-slate-800 max-h-72 overflow-y-auto">{{ note.timestamped_transcript }}</pre>
+              </div>
+            </div>
+          </details>
+        </article>
+        {% endfor %}
+      </div>
+    </section>
+
+    <!-- MP3 / MP4 미디어 변환 내역 섹션 -->
+    <section class="space-y-4 pt-4">
+      <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-4">
+        <div class="flex flex-wrap gap-2">
+          <button onclick="filterJobs('all')" id="tab-all"
+            class="filter-tab px-4 py-2 rounded-lg text-sm font-semibold bg-emerald-600 text-white">
+            📋 전체 미디어 변환 내역 ({{ stats.total_count }})
+          </button>
+          <button onclick="filterJobs('mp3')" id="tab-mp3"
+            class="filter-tab px-4 py-2 rounded-lg text-sm font-medium bg-slate-900 text-slate-300 border border-slate-800 hover:bg-slate-800">
+            🎵 MP3 오디오 ({{ stats.mp3_count }})
+          </button>
+          <button onclick="filterJobs('mp4')" id="tab-mp4"
+            class="filter-tab px-4 py-2 rounded-lg text-sm font-medium bg-slate-900 text-slate-300 border border-slate-800 hover:bg-slate-800">
+            🎬 MP4 비디오 ({{ stats.mp4_count }})
+          </button>
+        </div>
+        <span class="text-xs text-slate-400">
+          💡 브라우저 내장 오디오/비디오 플레이어로 바로 들어보거나 파일로 저장할 수 있습니다.
+        </span>
+      </div>
+
+      {% if not all_jobs %}
+      <div class="rounded-2xl border border-slate-800 bg-slate-900/50 p-8 text-center space-y-2">
+        <p class="text-sm font-bold text-slate-300">아직 변환된 MP3/MP4 미디어가 없습니다.</p>
+      </div>
+      {% endif %}
+
+      {% for job in all_jobs %}
+      <article
+        class="job-card rounded-2xl border {% if job.target_format == 'mp3' %}border-emerald-500/30{% else %}border-sky-500/30{% endif %} bg-slate-900/90 p-5 space-y-4 transition"
+        data-format="{{ job.target_format }}">
+        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+            {% if job.thumbnail_url %}
+            <img src="{{ job.thumbnail_url }}" alt="{{ job.title }}"
+              class="w-36 h-20 object-cover rounded-xl border border-slate-800 shrink-0" />
+            {% endif %}
+            <div class="space-y-1.5">
+              <div class="flex flex-wrap items-center gap-2">
+                {% if job.target_format == 'mp3' %}
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                  🎵 MP3 · {{ job.quality }}kbps
+                </span>
+                {% else %}
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-sky-500/20 text-sky-300 border border-sky-500/40">
+                  🎬 MP4 · {{ job.quality }}
+                </span>
+                {% endif %}
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-800 text-slate-300">
+                  ⏱ {{ job.duration_str }}
+                </span>
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-800 text-amber-300">
+                  📦 {{ job.file_size_human }}
+                </span>
+              </div>
+              <h3 class="text-base md:text-lg font-bold text-white">{{ job.title }}</h3>
+              <p class="text-xs text-slate-400">
+                채널: <strong class="text-slate-200">{{ job.uploader }}</strong> · 변환 시각: {{ job.completed_at or job.created_at }} ·
+                <a href="{{ job.url }}" target="_blank" class="text-sky-400 hover:underline">원본 유튜브 열기 ↗</a>
+              </p>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2 shrink-0">
+            {% if job.status == 'completed' %}
+            <a href="/api/jobs/{{ job.job_id }}/download"
+              class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-xs md:text-sm font-bold text-white shadow-lg shadow-emerald-600/20 transition flex items-center gap-1.5">
+              <span>📥</span> <span>{{ job.target_format | upper }} 다운로드</span>
+            </a>
+            <button onclick="sendJobToTelegram('{{ job.job_id }}')"
+              class="px-3.5 py-2 rounded-xl bg-sky-600/20 hover:bg-sky-600/30 border border-sky-500/40 text-xs font-semibold text-sky-300 transition flex items-center gap-1">
+              <span>✈️</span> <span>텔레그램 전송</span>
+            </button>
+            {% endif %}
+            <button onclick="deleteJob('{{ job.job_id }}')"
+              class="px-3 py-2 rounded-xl bg-rose-950/50 hover:bg-rose-900/60 border border-rose-500/30 text-xs font-semibold text-rose-300 transition">
+              🗑 삭제
+            </button>
+          </div>
+        </div>
+
+        {% if job.status == 'completed' %}
+        <div class="pt-2 border-t border-slate-800/80">
+          {% if job.target_format == 'mp3' %}
+          <audio controls preload="none" class="w-full h-10 rounded-lg">
+            <source src="/api/jobs/{{ job.job_id }}/download?inline=true" type="audio/mpeg" />
+          </audio>
+          {% else %}
+          <video controls preload="metadata" class="w-full max-h-80 rounded-xl bg-black border border-slate-800">
+            <source src="/api/jobs/{{ job.job_id }}/download?inline=true" type="video/mp4" />
+          </video>
+          {% endif %}
+        </div>
+        {% endif %}
+      </article>
+      {% endfor %}
+    </section>
+  </main>
+
+  <script>
+    function showToast(msg, isError = false) {
+      const box = document.getElementById('toast-box');
+      box.className = `rounded-xl border p-4 text-sm font-medium ${
+        isError
+          ? 'bg-rose-950/60 border-rose-500/50 text-rose-200'
+          : 'bg-emerald-950/60 border-emerald-500/50 text-emerald-200'
+      }`;
+      box.innerHTML = msg;
+      box.classList.remove('hidden');
+    }
+
+    function fillSampleUrl() {
+      document.getElementById('yt-url').value = 'https://www.youtube.com/watch?v=jNQXAC9IVRw';
+      fetchVideoPreview();
+    }
+
+    function selectFormat(fmt) {
+      document.getElementById('target-format').value = fmt;
+      const mp3Btn = document.getElementById('fmt-mp3-btn');
+      const mp4Btn = document.getElementById('fmt-mp4-btn');
+      const qSelect = document.getElementById('quality-select');
+      const qLabel = document.getElementById('quality-label');
+      const btnText = document.getElementById('btn-convert-text');
+
+      if (fmt === 'mp3') {
+        mp3Btn.className = 'px-3 py-2.5 rounded-lg text-xs font-bold border transition bg-emerald-600/20 border-emerald-500 text-emerald-300 flex items-center justify-center gap-1.5';
+        mp4Btn.className = 'px-3 py-2.5 rounded-lg text-xs font-bold border transition bg-slate-900 border-slate-800 text-slate-400 hover:bg-slate-800 flex items-center justify-center gap-1.5';
+        qLabel.textContent = '2️⃣ 오디오 음질 (비트레이트)';
+        qSelect.innerHTML = `
+          <option value="320">🔥 320 kbps (스튜디오 최고음질)</option>
+          <option value="192" selected>⭐ 192 kbps (표준 고음질 · 추천)</option>
+          <option value="128">⚡ 128 kbps (경량 빠른 변환)</option>
+        `;
+        btnText.textContent = 'MP3로 즉시 변환 시작';
+      } else {
+        mp4Btn.className = 'px-3 py-2.5 rounded-lg text-xs font-bold border transition bg-sky-600/20 border-sky-500 text-sky-300 flex items-center justify-center gap-1.5';
+        mp3Btn.className = 'px-3 py-2.5 rounded-lg text-xs font-bold border transition bg-slate-900 border-slate-800 text-slate-400 hover:bg-slate-800 flex items-center justify-center gap-1.5';
+        qLabel.textContent = '2️⃣ 비디오 해상도 (MP4 H.264+AAC)';
+        qSelect.innerHTML = `
+          <option value="best" selected>🔥 최고 화질 (Best Available)</option>
+          <option value="1080p">🎬 1080p Full HD</option>
+          <option value="720p">⭐ 720p HD (빠른 병합 · 추천)</option>
+          <option value="480p">📱 480p SD (모바일 절약)</option>
+          <option value="360p">⚡ 360p 경량</option>
+        `;
+        btnText.textContent = 'MP4로 즉시 변환 시작';
+      }
+    }
+
+    async function fetchVideoPreview() {
+      const url = document.getElementById('yt-url').value.trim();
+      if (!url) {
+        showToast('유튜브 링크를 먼저 입력해주세요.', true);
+        return;
+      }
+      const btn = document.getElementById('btn-preview');
+      btn.disabled = true;
+      btn.textContent = '⏳ 메타데이터 분석 중...';
+
+      try {
+        const res = await fetch(`/api/info?url=${encodeURIComponent(url)}`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || '정보 조회 실패');
+
+        document.getElementById('preview-thumb').src = data.thumbnail_url;
+        document.getElementById('preview-id').textContent = `ID: ${data.video_id}`;
+        document.getElementById('preview-duration').textContent = `길이: ${data.duration_str}`;
+        document.getElementById('preview-title').textContent = data.title;
+        document.getElementById('preview-uploader').textContent = `채널: ${data.uploader} · 조회수 ${data.view_count.toLocaleString()}회`;
+        document.getElementById('preview-box').classList.remove('hidden');
+      } catch (err) {
+        showToast(`❌ ${err.message}`, true);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '🔍 영상 정보 미리보기';
+      }
+    }
+
+    async function submitSummarize() {
+      const url = document.getElementById('yt-url').value.trim();
+      if (!url) {
+        showToast('유튜브 링크를 먼저 입력해주세요.', true);
+        return;
+      }
+      const custom_focus = document.getElementById('custom-focus').value.trim();
+      const send_telegram = document.getElementById('send-telegram').checked;
+      const btn = document.getElementById('btn-summarize');
+      const btnText = document.getElementById('btn-summarize-text');
+      btn.disabled = true;
+      btnText.textContent = '⏳ 스크립트 추출 및 AI 요약 중...';
+      showToast('📝 오픈소스 youtube-transcript-api로 자막을 추출하고 핵심 내용을 정리해 보관함에 저장하고 있습니다...');
+
+      try {
+        const res = await fetch('/api/summarize', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url, custom_focus, send_telegram }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || '스크립트 추출·정리 실패');
+
+        showToast(`✅ [${data.title}] 스크립트 추출 및 정리가 완료되어 노트 보관함에 저장되었습니다!`);
+        setTimeout(() => {
+          window.location.hash = '#notes-section';
+          window.location.reload();
+        }, 900);
+      } catch (err) {
+        showToast(`❌ 스크립트 정리 오류: ${err.message}`, true);
+      } finally {
+        btn.disabled = false;
+        btnText.textContent = '스크립트 추출 & 핵심 정리 (보관함 저장)';
+      }
+    }
+
+    async function submitConversion(e) {
+      e.preventDefault();
+      const url = document.getElementById('yt-url').value.trim();
+      const target_format = document.getElementById('target-format').value;
+      const quality = document.getElementById('quality-select').value;
+      const send_telegram = document.getElementById('send-telegram').checked;
+
+      const btn = document.getElementById('btn-convert');
+      const btnText = document.getElementById('btn-convert-text');
+      btn.disabled = true;
+      btnText.textContent = `⏳ ${target_format.toUpperCase()} 다운로드 및 FFmpeg 변환 중...`;
+      showToast(`🚀 유튜브 영상에서 ${target_format.toUpperCase()} (${quality}) 추출을 시작했습니다. 잠시만 기다려주세요...`);
+
+      try {
+        const res = await fetch('/api/convert', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url, target_format, quality, send_telegram }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || '변환 실패');
+
+        showToast(`✅ 변환 완료! [${data.title}] (${data.file_size_human}) — 자동으로 다운로드를 시작합니다.`);
+        window.location.href = data.download_url;
+        setTimeout(() => window.location.reload(), 1200);
+      } catch (err) {
+        showToast(`❌ 변환 오류: ${err.message}`, true);
+      } finally {
+        btn.disabled = false;
+        btnText.textContent = `${target_format.toUpperCase()}로 즉시 변환 시작`;
+      }
+    }
+
+    async function openTelegramBotMenu() {
+      showToast('✈️ 텔레그램 Bot 3 (@soracrabsss_bot) 채팅방으로 대화형 앱 버튼 & 정리 노트 보관함을 전송 중입니다...');
+      try {
+        const res = await fetch('/api/telegram/menu', { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || '메뉴 전송 실패');
+        showToast(`✅ 텔레그램 @${data.bot_username} (TELEGRAM_BOT_3) 채팅방에 앱 버튼과 정리 노트 보관함을 전송했습니다!`);
+      } catch (err) {
+        showToast(`❌ 텔레그램 메뉴 전송 실패: ${err.message}`, true);
+      }
+    }
+
+    async function sendNoteToTelegram(noteId) {
+      showToast('✈️ 텔레그램 Bot 3 (@soracrabsss_bot)로 스크립트 정리 노트를 전송 중입니다...');
+      try {
+        const res = await fetch(`/api/telegram/send-note/${noteId}`, { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || '전송 실패');
+        showToast('✅ 텔레그램 (@soracrabsss_bot)으로 정리 노트가 전송되었습니다!');
+      } catch (err) {
+        showToast(`❌ 텔레그램 전송 실패: ${err.message}`, true);
+      }
+    }
+
+    async function deleteNote(noteId) {
+      try {
+        const res = await fetch(`/api/notes/${noteId}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error('삭제 실패');
+        window.location.reload();
+      } catch (err) {
+        showToast(`❌ ${err.message}`, true);
+      }
+    }
+
+    function filterNotesByKeyword() {
+      const kw = document.getElementById('note-search-input').value.trim().toLowerCase();
+      document.querySelectorAll('.note-card').forEach((card) => {
+        if (!kw || card.dataset.search.includes(kw)) {
+          card.classList.remove('hidden');
+        } else {
+          card.classList.add('hidden');
+        }
+      });
+    }
+
+    async function sendJobToTelegram(jobId) {
+      showToast('✈️ 텔레그램 Bot 3 (@soracrabsss_bot)로 미디어 전송 중...');
+      try {
+        const res = await fetch(`/api/telegram/send/${jobId}`, { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || '전송 실패');
+        showToast('✅ 텔레그램 (@soracrabsss_bot) 전송이 완료되었습니다!');
+      } catch (err) {
+        showToast(`❌ 텔레그램 전송 실패: ${err.message}`, true);
+      }
+    }
+
+    async function deleteJob(jobId) {
+      try {
+        const res = await fetch(`/api/jobs/${jobId}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error('삭제 실패');
+        window.location.reload();
+      } catch (err) {
+        showToast(`❌ ${err.message}`, true);
+      }
+    }
+
+    function filterJobs(mode) {
+      document.querySelectorAll('.job-card').forEach((card) => {
+        if (mode === 'all' || card.dataset.format === mode) {
+          card.classList.remove('hidden');
+        } else {
+          card.classList.add('hidden');
+        }
+      });
+      ['all', 'mp3', 'mp4'].forEach((t) => {
+        const btn = document.getElementById(`tab-${t}`);
+        if (t === mode) {
+          btn.className = 'filter-tab px-4 py-2 rounded-lg text-sm font-semibold bg-emerald-600 text-white';
+        } else {
+          btn.className = 'filter-tab px-4 py-2 rounded-lg text-sm font-medium bg-slate-900 text-slate-300 border border-slate-800 hover:bg-slate-800';
+        }
+      });
+    }
+  </script>
+</body>
+</html>
