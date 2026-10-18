@@ -33,6 +33,7 @@ class ConvertRequest(BaseModel):
         description="MP3 비트레이트(320/192/128) 또는 MP4 해상도(best/1080p/720p/480p/360p)",
     )
     send_telegram: bool = Field(default=False, description="변환 완료 후 텔레그램 알림/전송 여부")
+    force_reconvert: bool = Field(default=False, description="DB에 이미 변환된 항목이 있어도 강제 재변환 여부")
 
 
 class ConversionJob(BaseModel):
@@ -48,6 +49,9 @@ class ConversionJob(BaseModel):
     quality: str
     status: Literal["queued", "downloading", "converting", "completed", "failed"] = "queued"
     progress_percent: float = 0.0
+    queue_position: int = 0
+    is_cached: bool = False
+    already_in_queue: bool = False
     file_name: str = ""
     file_path: str = ""
     file_size_bytes: int = 0

@@ -38,7 +38,8 @@ def init_db() -> None:
                     status VARCHAR(32) NOT NULL,
                     created_at VARCHAR(64) NOT NULL,
                     payload_json LONGTEXT NOT NULL,
-                    INDEX idx_jobs_format_created (target_format, created_at)
+                    INDEX idx_jobs_format_created (target_format, created_at),
+                    INDEX idx_jobs_video_format (video_id, target_format)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
                 """
             )
@@ -98,6 +99,80 @@ def load_job(job_id: str) -> Optional[ConversionJob]:
             return ConversionJob.model_validate_json(row["payload_json"])
 
 
+def find_existing_job(
+    video_id: str,
+    target_format: str,
+    quality: Optional[str] = None,
+) -> Optional[ConversionJob]:
+    """Check DB first to prevent duplicate conversions for the same video_id + target_format (+ quality)."""
+    if not video_id or video_id == "unknown":
+        return None
+    init_db()
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT payload_json
+                FROM conversion_jobs
+                WHERE video_id = %s AND target_format = %s
+                ORDER BY created_at DESC
+                LIMIT 20
+                """,
+                (video_id, target_format),
+            )
+            rows = cur.fetchall()
+
+    jobs = [ConversionJob.model_validate_json(r["payload_json"]) for r in rows]
+
+    # 1. Check if already in queue or actively converting
+    for job in jobs:
+        if job.status in ("queued", "downloading", "converting"):
+            if quality is None or job.quality == quality:
+                job.already_in_queue = True
+                return job
+
+    # 2. Check if already completed and media file exists on disk
+    for job in jobs:
+        if job.status == "completed" and job.file_path and Path(job.file_path).exists():
+            if quality is None or job.quality == quality:
+                job.is_cached = True
+                return job
+
+    # 3. Fallback: if any completed job for the same video_id & target_format exists on disk
+    for job in jobs:
+        if job.status == "completed" and job.file_path and Path(job.file_path).exists():
+            job.is_cached = True
+            return job
+
+    return None
+
+
+def load_active_queue_jobs() -> List[ConversionJob]:
+    """Return all currently queued, downloading, or converting jobs in FIFO order with queue_position."""
+    init_db()
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT payload_json
+                FROM conversion_jobs
+                WHERE status IN ('queued', 'downloading', 'converting')
+                ORDER BY created_at ASC
+                """
+            )
+            rows = cur.fetchall()
+
+    active_jobs = [ConversionJob.model_validate_json(r["payload_json"]) for r in rows]
+    q_pos = 1
+    for job in active_jobs:
+        if job.status == "queued":
+            job.queue_position = q_pos
+            q_pos += 1
+        else:
+            job.queue_position = 0
+    return active_jobs
+
+
 def load_all_jobs(target_format: Optional[str] = None, limit: int = 100) -> List[ConversionJob]:
     init_db()
     with get_connection() as conn:
@@ -113,7 +188,15 @@ def load_all_jobs(target_format: Optional[str] = None, limit: int = 100) -> List
                     (int(limit),),
                 )
             rows = cur.fetchall()
-    return [ConversionJob.model_validate_json(r["payload_json"]) for r in rows]
+
+    jobs = [ConversionJob.model_validate_json(r["payload_json"]) for r in rows]
+    # Populate queue_position for any queued jobs
+    queued_in_asc = [j for j in reversed(jobs) if j.status == "queued"]
+    pos_map = {j.job_id: idx + 1 for idx, j in enumerate(queued_in_asc)}
+    for j in jobs:
+        if j.status == "queued":
+            j.queue_position = pos_map.get(j.job_id, 1)
+    return jobs
 
 
 def delete_job_record(job_id: str) -> Optional[ConversionJob]:

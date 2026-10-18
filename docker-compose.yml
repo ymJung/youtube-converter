@@ -3,11 +3,10 @@ services:
     image: mysql:8.0
     container_name: dev-mysql
     restart: always
+    env_file:
+      - ~/.env
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-devrootpass123!}
       MYSQL_DATABASE: ${MYSQL_DATABASE:-youtube_converter}
-      MYSQL_USER: ${MYSQL_USER:-devuser}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-devpass123!}
       TZ: UTC
     ports:
       - "127.0.0.1:3306:3306"
@@ -19,7 +18,7 @@ services:
       - ./data/mysql:/var/lib/mysql
       - ./docker/mysql-init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-devrootpass123!}"]
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p$$MYSQL_ROOT_PASSWORD"]
       interval: 5s
       timeout: 5s
       retries: 20

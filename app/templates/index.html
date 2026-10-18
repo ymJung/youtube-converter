@@ -10,6 +10,7 @@
     .badge-glow { box-shadow: 0 0 15px rgba(16, 185, 129, 0.25); }
     .note-glow { box-shadow: 0 0 15px rgba(168, 85, 247, 0.25); }
     .mp4-glow { box-shadow: 0 0 15px rgba(56, 189, 248, 0.25); }
+    .queue-glow { box-shadow: 0 0 18px rgba(245, 158, 11, 0.25); }
   </style>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen">
@@ -28,6 +29,10 @@
         </p>
       </div>
       <div class="flex flex-wrap items-center gap-2.5">
+        <a href="#queue-section"
+          class="px-3.5 py-2 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-xs md:text-sm font-semibold text-amber-300 transition flex items-center gap-1.5">
+          <span>⏳</span> <span>변환 대기열 (<span id="nav-queue-count">{{ stats.active_queue_count }}</span>)</span>
+        </a>
         <a href="#notes-section"
           class="px-3.5 py-2 rounded-lg bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/40 text-xs md:text-sm font-semibold text-purple-300 transition flex items-center gap-1.5">
           <span>📚</span> <span>스크립트 정리 노트 보관함 ({{ stats.notes_count }})</span>
@@ -50,10 +55,10 @@
 
     <!-- 상단 KPI 요약 카드 -->
     <section class="grid grid-cols-2 md:grid-cols-5 gap-4">
-      <div class="rounded-xl bg-purple-950/40 border border-purple-500/40 p-4 note-glow">
-        <p class="text-xs text-purple-300 font-semibold">📚 스크립트 정리 노트 보관함</p>
-        <p class="text-2xl font-extrabold text-purple-400 mt-1">{{ stats.notes_count }}<span class="text-sm font-normal text-purple-300 ml-1">건</span></p>
-        <p class="text-[11px] text-purple-300/80 mt-1">원할 때 언제든 요약·대본 열람</p>
+      <div class="rounded-xl bg-amber-950/40 border border-amber-500/40 p-4 queue-glow">
+        <p class="text-xs text-amber-300 font-semibold">⏳ 변환 대기열 (Queue)</p>
+        <p class="text-2xl font-extrabold text-amber-400 mt-1"><span id="kpi-queue-count">{{ stats.active_queue_count }}</span><span class="text-sm font-normal text-amber-300 ml-1">건 진행/대기</span></p>
+        <p class="text-[11px] text-amber-300/80 mt-1">DB 중복 조회 후 순차 변환</p>
       </div>
       <div class="rounded-xl bg-emerald-950/40 border border-emerald-500/40 p-4 badge-glow">
         <p class="text-xs text-emerald-300 font-semibold">🎵 MP3 오디오 추출</p>
@@ -65,15 +70,15 @@
         <p class="text-2xl font-extrabold text-sky-400 mt-1">{{ stats.mp4_count }}<span class="text-sm font-normal text-sky-300 ml-1">건</span></p>
         <p class="text-[11px] text-sky-300/80 mt-1">1080p/720p H.264+AAC 병합</p>
       </div>
-      <div class="rounded-xl bg-slate-900 border border-slate-800 p-4">
-        <p class="text-xs text-amber-300 font-medium">💾 로컬 미디어 보관 용량</p>
-        <p class="text-2xl font-bold text-amber-400 mt-1">{{ stats.total_size_human }}</p>
-        <p class="text-[11px] text-slate-400 mt-1">총 변환 {{ stats.completed_count }}건 완료</p>
+      <div class="rounded-xl bg-purple-950/40 border border-purple-500/40 p-4 note-glow">
+        <p class="text-xs text-purple-300 font-semibold">📚 스크립트 정리 노트 보관함</p>
+        <p class="text-2xl font-extrabold text-purple-400 mt-1">{{ stats.notes_count }}<span class="text-sm font-normal text-purple-300 ml-1">건</span></p>
+        <p class="text-[11px] text-purple-300/80 mt-1">원할 때 언제든 요약·대본 열람</p>
       </div>
       <div class="rounded-xl bg-slate-900 border border-slate-800 p-4 col-span-2 md:col-span-1">
-        <p class="text-xs text-slate-300 font-medium">🔌 서버 & 텔레그램 프로토콜</p>
-        <p class="text-2xl font-bold text-white mt-1">:{{ port }} <span class="text-xs font-normal text-sky-400">Bot 3 연동</span></p>
-        <p class="text-[11px] text-slate-400 mt-1">@soracrabsss_bot 실시간 폴링</p>
+        <p class="text-xs text-slate-300 font-medium">💾 미디어 보관 용량</p>
+        <p class="text-2xl font-bold text-white mt-1">{{ stats.total_size_human }}</p>
+        <p class="text-[11px] text-slate-400 mt-1">총 변환 {{ stats.completed_count }}건 완료</p>
       </div>
     </section>
 
@@ -82,10 +87,10 @@
       <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2 border-b border-slate-800 pb-4">
         <div>
           <h2 class="text-lg font-bold text-white flex items-center gap-2">
-            <span>🚀</span> <span>유튜브 링크 워크스테이션 (📝 스크립트 추출·핵심 정리 & 🎵 MP3 / 🎬 MP4 변환)</span>
+            <span>🚀</span> <span>유튜브 링크 워크스테이션 (📝 스크립트 추출·핵심 정리 & 🎵 MP3 / 🎬 MP4 큐 변환)</span>
           </h2>
           <p class="text-xs text-slate-400 mt-1">
-            유튜브 링크를 입력하고 <strong>[📝 스크립트 추출 & AI 핵심 정리]</strong>를 누르면 오픈소스 <code>youtube-transcript-api</code>가 대본을 추출해 요약 노트를 보관함에 저장합니다.
+            MP3/MP4 변환 요청 시 <strong>먼저 DB에서 동일 영상 변환 이력을 조회해 중복 변환을 방지</strong>하며, 신규 영상은 <strong>변환 대기열(Queue)에 등록</strong>되어 순차적으로 변환됩니다.
           </p>
         </div>
         <div class="flex items-center gap-2">
@@ -173,11 +178,77 @@
             </label>
             <button type="submit" id="btn-convert"
               class="w-full py-2.5 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-sm font-extrabold text-white shadow-lg shadow-emerald-600/25 transition flex items-center justify-center gap-2">
-              <span>⚡</span> <span id="btn-convert-text">MP3로 즉시 변환 시작</span>
+              <span>📥</span> <span id="btn-convert-text">MP3 변환 대기열(큐)에 등록</span>
             </button>
           </div>
         </div>
       </form>
+    </section>
+
+    <!-- ⏳ 실시간 변환 대기열 (Conversion Queue) 섹션 -->
+    <section id="queue-section" class="rounded-2xl border border-amber-500/40 bg-slate-900/90 p-5 space-y-4 queue-glow">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-slate-800 pb-3">
+        <div class="flex items-center gap-2.5">
+          <span class="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-300 text-sm">⏳</span>
+          <div>
+            <h2 class="text-base font-extrabold text-white flex items-center gap-2">
+              <span>실시간 변환 대기열 (Conversion Queue)</span>
+              <span id="queue-badge" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                진행/대기 {{ stats.active_queue_count }}건
+              </span>
+            </h2>
+            <p class="text-xs text-slate-400 mt-0.5">
+              변환 요청은 즉시 완료되지 않고 큐(대기열)에 등록된 후 <strong>대기중 → 원본 다운로드 → FFmpeg 인코딩 → 완료</strong> 순서로 진행됩니다.
+            </p>
+          </div>
+        </div>
+        <button type="button" onclick="pollQueueStatus(true)"
+          class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs text-slate-300 transition self-start sm:self-auto">
+          🔄 대기열 상태 새로고침
+        </button>
+      </div>
+
+      <div id="queue-list" class="space-y-3">
+        {% if not active_queue_jobs %}
+        <div id="queue-empty" class="rounded-xl border border-slate-800 bg-slate-950/60 p-4 text-center text-xs text-slate-400">
+          현재 대기열에 진행 중인 변환 작업이 없습니다. 위 워크스테이션에서 유튜브 링크를 등록하면 이곳에 실시간 진행률이 표시됩니다.
+        </div>
+        {% else %}
+          {% for qjob in active_queue_jobs %}
+          <div class="rounded-xl border border-amber-500/40 bg-slate-950 p-4 space-y-2.5">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div class="flex items-center gap-2.5">
+                {% if qjob.status == 'queued' %}
+                <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse">
+                  🕒 대기열 대기 중 (순번 #{{ qjob.queue_position or 1 }})
+                </span>
+                {% elif qjob.status == 'downloading' %}
+                <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-sky-500/20 text-sky-300 border border-sky-500/40 animate-pulse">
+                  ⬇️ 원본 스트림 다운로드 중 ({{ qjob.progress_percent }}%)
+                </span>
+                {% elif qjob.status == 'converting' %}
+                <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-purple-500/20 text-purple-300 border border-purple-500/40 animate-pulse">
+                  ⚙️ FFmpeg {{ qjob.target_format | upper }} 인코딩 변환 중 ({{ qjob.progress_percent }}%)
+                </span>
+                {% endif %}
+                <span class="px-2 py-0.5 rounded text-xs font-semibold bg-slate-800 text-slate-200">
+                  {{ qjob.target_format | upper }} · {{ qjob.quality }}{% if qjob.target_format == 'mp3' %}kbps{% endif %}
+                </span>
+              </div>
+              <span class="text-[11px] text-slate-400">등록 시각: {{ qjob.created_at }}</span>
+            </div>
+            <div class="flex items-center justify-between gap-2">
+              <p class="text-sm font-bold text-white truncate">{{ qjob.title }}</p>
+              <span class="text-xs font-mono text-amber-300 shrink-0">{{ qjob.progress_percent }}%</span>
+            </div>
+            <div class="w-full h-2.5 rounded-full bg-slate-800 overflow-hidden">
+              <div class="h-full bg-gradient-to-r from-amber-500 to-emerald-400 transition-all duration-500"
+                style="width: {{ qjob.progress_percent if qjob.progress_percent > 5 else 8 }}%"></div>
+            </div>
+          </div>
+          {% endfor %}
+        {% endif %}
+      </div>
     </section>
 
     <!-- 📚 스크립트 정리 노트 보관함 섹션 (원할 때 언제든 열람/검색) -->
@@ -302,7 +373,7 @@
     </section>
 
     <!-- MP3 / MP4 미디어 변환 내역 섹션 -->
-    <section class="space-y-4 pt-4">
+    <section id="jobs-section" class="space-y-4 pt-4">
       <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-4">
         <div class="flex flex-wrap gap-2">
           <button onclick="filterJobs('all')" id="tab-all"
@@ -330,7 +401,7 @@
       {% endif %}
 
       {% for job in all_jobs %}
-      <article
+      <article id="job-card-{{ job.job_id }}"
         class="job-card rounded-2xl border {% if job.target_format == 'mp3' %}border-emerald-500/30{% else %}border-sky-500/30{% endif %} bg-slate-900/90 p-5 space-y-4 transition"
         data-format="{{ job.target_format }}">
         <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
@@ -350,16 +421,35 @@
                   🎬 MP4 · {{ job.quality }}
                 </span>
                 {% endif %}
+                {% if job.status == 'completed' %}
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                  ✅ 변환 완료
+                </span>
+                {% elif job.status == 'queued' %}
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse">
+                  ⏳ 큐 대기중 (#{{ job.queue_position or 1 }})
+                </span>
+                {% elif job.status in ('downloading', 'converting') %}
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-sky-500/20 text-sky-300 border border-sky-500/40 animate-pulse">
+                  ⚙️ 변환 진행중 ({{ job.progress_percent }}%)
+                </span>
+                {% elif job.status == 'failed' %}
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40">
+                  ❌ 변환 실패
+                </span>
+                {% endif %}
                 <span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-800 text-slate-300">
                   ⏱ {{ job.duration_str }}
                 </span>
+                {% if job.status == 'completed' %}
                 <span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-800 text-amber-300">
                   📦 {{ job.file_size_human }}
                 </span>
+                {% endif %}
               </div>
               <h3 class="text-base md:text-lg font-bold text-white">{{ job.title }}</h3>
               <p class="text-xs text-slate-400">
-                채널: <strong class="text-slate-200">{{ job.uploader }}</strong> · 변환 시각: {{ job.completed_at or job.created_at }} ·
+                채널: <strong class="text-slate-200">{{ job.uploader }}</strong> · 시각: {{ job.completed_at or job.created_at }} ·
                 <a href="{{ job.url }}" target="_blank" class="text-sky-400 hover:underline">원본 유튜브 열기 ↗</a>
               </p>
             </div>
@@ -402,13 +492,20 @@
   </main>
 
   <script>
-    function showToast(msg, isError = false) {
+    let queuePollTimer = null;
+    const trackedJobIds = new Set(
+      {{ active_queue_jobs | map(attribute='job_id') | list | tojson }}
+    );
+
+    function showToast(msg, isError = false, isWarning = false) {
       const box = document.getElementById('toast-box');
-      box.className = `rounded-xl border p-4 text-sm font-medium ${
-        isError
-          ? 'bg-rose-950/60 border-rose-500/50 text-rose-200'
-          : 'bg-emerald-950/60 border-emerald-500/50 text-emerald-200'
-      }`;
+      let styleCls = 'bg-emerald-950/70 border-emerald-500/50 text-emerald-200';
+      if (isError) {
+        styleCls = 'bg-rose-950/70 border-rose-500/50 text-rose-200';
+      } else if (isWarning) {
+        styleCls = 'bg-amber-950/70 border-amber-500/50 text-amber-200';
+      }
+      box.className = `rounded-xl border p-4 text-sm font-medium ${styleCls}`;
       box.innerHTML = msg;
       box.classList.remove('hidden');
     }
@@ -435,7 +532,7 @@
           <option value="192" selected>⭐ 192 kbps (표준 고음질 · 추천)</option>
           <option value="128">⚡ 128 kbps (경량 빠른 변환)</option>
         `;
-        btnText.textContent = 'MP3로 즉시 변환 시작';
+        btnText.textContent = 'MP3 변환 대기열(큐)에 등록';
       } else {
         mp4Btn.className = 'px-3 py-2.5 rounded-lg text-xs font-bold border transition bg-sky-600/20 border-sky-500 text-sky-300 flex items-center justify-center gap-1.5';
         mp3Btn.className = 'px-3 py-2.5 rounded-lg text-xs font-bold border transition bg-slate-900 border-slate-800 text-slate-400 hover:bg-slate-800 flex items-center justify-center gap-1.5';
@@ -447,8 +544,110 @@
           <option value="480p">📱 480p SD (모바일 절약)</option>
           <option value="360p">⚡ 360p 경량</option>
         `;
-        btnText.textContent = 'MP4로 즉시 변환 시작';
+        btnText.textContent = 'MP4 변환 대기열(큐)에 등록';
       }
+    }
+
+    function renderQueueList(activeJobs) {
+      const count = activeJobs.length;
+      document.getElementById('nav-queue-count').textContent = count;
+      document.getElementById('kpi-queue-count').textContent = count;
+      document.getElementById('queue-badge').textContent = `진행/대기 ${count}건`;
+
+      const container = document.getElementById('queue-list');
+      if (count === 0) {
+        container.innerHTML = `
+          <div id="queue-empty" class="rounded-xl border border-slate-800 bg-slate-950/60 p-4 text-center text-xs text-slate-400">
+            현재 대기열에 진행 중인 변환 작업이 없습니다. 위 워크스테이션에서 유튜브 링크를 등록하면 이곳에 실시간 진행률이 표시됩니다.
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = activeJobs.map((qjob) => {
+        let statusBadge = '';
+        if (qjob.status === 'queued') {
+          statusBadge = `<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse">🕒 대기열 대기 중 (순번 #${qjob.queue_position || 1})</span>`;
+        } else if (qjob.status === 'downloading') {
+          statusBadge = `<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-sky-500/20 text-sky-300 border border-sky-500/40 animate-pulse">⬇️ 원본 스트림 다운로드 중 (${qjob.progress_percent}%)</span>`;
+        } else {
+          statusBadge = `<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-purple-500/20 text-purple-300 border border-purple-500/40 animate-pulse">⚙️ FFmpeg ${qjob.target_format.toUpperCase()} 인코딩 변환 중 (${qjob.progress_percent}%)</span>`;
+        }
+        const unit = qjob.target_format === 'mp3' ? 'kbps' : '';
+        const barWidth = Math.max(8, qjob.progress_percent || 0);
+        return `
+          <div class="rounded-xl border border-amber-500/40 bg-slate-950 p-4 space-y-2.5">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div class="flex flex-wrap items-center gap-2.5">
+                ${statusBadge}
+                <span class="px-2 py-0.5 rounded text-xs font-semibold bg-slate-800 text-slate-200">
+                  ${qjob.target_format.toUpperCase()} · ${qjob.quality}${unit}
+                </span>
+              </div>
+              <span class="text-[11px] text-slate-400">등록 시각: ${qjob.created_at}</span>
+            </div>
+            <div class="flex items-center justify-between gap-2">
+              <p class="text-sm font-bold text-white truncate">${qjob.title}</p>
+              <span class="text-xs font-mono text-amber-300 shrink-0">${qjob.progress_percent}%</span>
+            </div>
+            <div class="w-full h-2.5 rounded-full bg-slate-800 overflow-hidden">
+              <div class="h-full bg-gradient-to-r from-amber-500 to-emerald-400 transition-all duration-500"
+                style="width: ${barWidth}%"></div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function pollQueueStatus(manual = false) {
+      try {
+        const res = await fetch('/api/queue');
+        if (!res.ok) return;
+        const data = await res.json();
+        const activeJobs = data.active_jobs || [];
+        const recentJobs = data.recent_jobs || [];
+
+        renderQueueList(activeJobs);
+
+        // Check if any tracked job has just completed or failed
+        for (const jobId of Array.from(trackedJobIds)) {
+          const stillActive = activeJobs.some((j) => j.job_id === jobId);
+          if (!stillActive) {
+            trackedJobIds.delete(jobId);
+            const finished = recentJobs.find((j) => j.job_id === jobId);
+            if (finished && finished.status === 'completed') {
+              showToast(
+                `✅ 대기열 변환 완료! <strong>[${finished.title}]</strong> (${finished.file_size_human}) — 아래 목록에 반영되었으며 자동으로 다운로드를 시작합니다.`
+              );
+              window.location.href = finished.download_url;
+              setTimeout(() => window.location.reload(), 1200);
+              return;
+            } else if (finished && finished.status === 'failed') {
+              showToast(`❌ 변환 실패 [${finished.title}]: ${finished.error_message}`, true);
+            }
+          }
+        }
+
+        if (activeJobs.length === 0 && queuePollTimer) {
+          clearInterval(queuePollTimer);
+          queuePollTimer = null;
+        }
+        if (manual) {
+          showToast(`🔄 변환 대기열 상태를 갱신했습니다 (현재 진행/대기 ${activeJobs.length}건).`);
+        }
+      } catch (e) {
+        // ignore transient network errors
+      }
+    }
+
+    function startQueuePolling() {
+      if (!queuePollTimer) {
+        queuePollTimer = setInterval(() => pollQueueStatus(false), 1500);
+      }
+    }
+
+    if (trackedJobIds.size > 0) {
+      startQueuePolling();
     }
 
     async function fetchVideoPreview() {
@@ -526,26 +725,61 @@
       const btn = document.getElementById('btn-convert');
       const btnText = document.getElementById('btn-convert-text');
       btn.disabled = true;
-      btnText.textContent = `⏳ ${target_format.toUpperCase()} 다운로드 및 FFmpeg 변환 중...`;
-      showToast(`🚀 유튜브 영상에서 ${target_format.toUpperCase()} (${quality}) 추출을 시작했습니다. 잠시만 기다려주세요...`);
+      btnText.textContent = '🔍 DB 중복 확인 및 대기열 등록 중...';
+      showToast(`🔍 DB에서 기존 변환 이력을 먼저 조회한 뒤, 미변환 영상이면 ${target_format.toUpperCase()} 변환 대기열(큐)에 등록합니다...`, false, true);
 
       try {
-        const res = await fetch('/api/convert', {
+        const res = await fetch('/api/convert/enqueue', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ url, target_format, quality, send_telegram }),
         });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.detail || '변환 실패');
+        if (!res.ok) throw new Error(data.detail || '변환 큐 등록 실패');
 
-        showToast(`✅ 변환 완료! [${data.title}] (${data.file_size_human}) — 자동으로 다운로드를 시작합니다.`);
-        window.location.href = data.download_url;
-        setTimeout(() => window.location.reload(), 1200);
+        // 1. DB에 이미 변환 완료된 파일이 존재하는 경우 (중복 변환 방지)
+        if (data.is_cached && data.status === 'completed') {
+          showToast(
+            `♻️ <strong>[DB 중복 변환 방지]</strong> 이미 변환 완료된 미디어(<strong>${data.title}</strong> · ${data.file_size_human})가 DB에 존재합니다! 중복 변환 없이 기존 파일로 바로 연결합니다. ` +
+            `<a href="${data.download_url}" class="underline font-bold ml-2 text-white">[📥 즉시 다운로드]</a>`
+          );
+          const existingCard = document.getElementById(`job-card-${data.job_id}`);
+          if (existingCard) {
+            existingCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            existingCard.classList.add('ring-2', 'ring-emerald-400');
+          }
+          return;
+        }
+
+        // 2. 이미 대기열(큐)에 들어가 있거나 변환 중인 경우 (중복 큐 등록 방지)
+        if (data.already_in_queue) {
+          trackedJobIds.add(data.job_id);
+          await pollQueueStatus(false);
+          startQueuePolling();
+          showToast(
+            `⏳ <strong>[중복 큐 등록 방지]</strong> <strong>${data.title}</strong> 영상은 이미 변환 대기열에서 처리 중입니다! 아래 실시간 변환 대기열에서 진행률을 확인하세요.`,
+            false,
+            true
+          );
+          document.getElementById('queue-section').scrollIntoView({ behavior: 'smooth', block: 'center' });
+          return;
+        }
+
+        // 3. 신규 변환 작업이 대기열(큐)에 정상 등록된 경우
+        trackedJobIds.add(data.job_id);
+        await pollQueueStatus(false);
+        startQueuePolling();
+        showToast(
+          `📥 <strong>[변환 대기열 등록 완료]</strong> <strong>${data.title}</strong> 영상이 ${target_format.toUpperCase()} 변환 큐(순번 #${data.queue_position || 1})에 추가되었습니다! 아래 대기열에서 실시간 변환 진행률이 표시됩니다.`,
+          false,
+          true
+        );
+        document.getElementById('queue-section').scrollIntoView({ behavior: 'smooth', block: 'center' });
       } catch (err) {
-        showToast(`❌ 변환 오류: ${err.message}`, true);
+        showToast(`❌ 변환 큐 등록 오류: ${err.message}`, true);
       } finally {
         btn.disabled = false;
-        btnText.textContent = `${target_format.toUpperCase()}로 즉시 변환 시작`;
+        btnText.textContent = `${target_format.toUpperCase()} 변환 대기열(큐)에 등록`;
       }
     }
 
