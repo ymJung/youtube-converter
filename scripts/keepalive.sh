@@ -11,6 +11,13 @@ PORT="${PORT:-8010}"
 
 mkdir -p "$LOG_DIR"
 
+# Ensure Docker MySQL container (dev-mysql) is running
+if command -v docker >/dev/null 2>&1; then
+    if ! sudo docker ps --format '{{.Names}}' | grep -q "^dev-mysql$"; then
+        cd "$PROJECT_DIR" && sudo docker compose up -d >/dev/null 2>&1 || true
+    fi
+fi
+
 if [ -f "$PID_FILE" ]; then
     PID=$(cat "$PID_FILE")
     if kill -0 "$PID" 2>/dev/null; then
@@ -30,4 +37,4 @@ export PATH="$PROJECT_DIR/bin:$PATH"
 nohup setsid "$UV_BIN" run uvicorn app.main:app --host 0.0.0.0 --port "$PORT" >> "$SERVER_LOG" 2>&1 < /dev/null &
 NEW_PID=$!
 echo "$NEW_PID" > "$PID_FILE"
-echo "[$(date -u '+%Y-%m-%d %H:%M:%S UTC')] Started TubeShift YouTube Converter server on port $PORT (PID=$NEW_PID)" >> "$SERVER_LOG"
+echo "[$(date -u '+%Y-%m-%d %H:%M:%S UTC')] Started TubeShift YouTube Converter server on port $PORT with Docker MySQL (PID=$NEW_PID)" >> "$SERVER_LOG"

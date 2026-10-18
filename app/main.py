@@ -93,6 +93,7 @@ async def get_server_protocol() -> Dict[str, Any]:
             "telegram_bot": "TELEGRAM_BOT_2 (@gurucrabsss_bot)",
         },
         "engine": {
+            "database": f"Docker MySQL 8.0 ({settings.MYSQL_HOST}:{settings.MYSQL_PORT}/{settings.MYSQL_DATABASE})",
             "extractor": "yt-dlp (open-source)",
             "transcript_extractor": "youtube-transcript-api + yt-dlp subtitle parser",
             "summarizer": "Gemini 2.5 Flash (structured Korean summary + timeline)",

@@ -5,11 +5,13 @@ description = "TubeShift - Open-source YouTube to MP3/MP4 Converter & Transcript
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
+    "cryptography>=50.0.2",
     "fastapi>=0.143.3",
     "google-genai>=2.31.0",
     "httpx>=0.28.1",
     "imageio-ffmpeg>=0.6.0",
     "jinja2>=3.1.6",
+    "pymysql>=1.2.3",
     "pytest>=9.1.1",
     "pytest-asyncio>=1.4.0",
     "python-dotenv>=1.2.4",
@@ -21,3 +23,5 @@ dependencies = [
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
+testpaths = ["tests"]
+norecursedirs = ["data", "downloads", "logs", "bin", ".venv"]

@@ -12,7 +12,7 @@
 | :--- | :--- | :--- |
 | **바인딩 주소 / 포트** | `0.0.0.0:8000` | **`0.0.0.0:8010`** |
 | **핵심 오픈소스 엔진** | `FastAPI` + `BeautifulSoup4` | **`FastAPI` + `yt-dlp[default]` + `Deno EJS` + `FFmpeg 7.0.2-static`** |
-| **데이터베이스** | `data/auction_radar.db` | **`data/youtube_converter.db`** |
+| **데이터베이스** | `Docker MySQL 8.0` (`auction_radar` DB) | **`Docker MySQL 8.0` (`127.0.0.1:3306/youtube_converter` DB)** |
 | **텔레그램 연동 봇** | `TELEGRAM_BOT_2` (`@gurucrabsss_bot`) | **`TELEGRAM_BOT_3` (`@soracrabsss_bot` · 소라크랩bot)** |
 
 ### REST API & 텔레그램 봇 인터페이스 명세

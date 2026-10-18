@@ -27,6 +27,13 @@ class Settings:
     DB_PATH: Path = PROJECT_ROOT / "data" / "youtube_converter.db"
     DOWNLOADS_DIR: Path = PROJECT_ROOT / "downloads"
 
+    # Docker MySQL Configuration
+    MYSQL_HOST: str = os.getenv("MYSQL_HOST", "127.0.0.1").strip()
+    MYSQL_PORT: int = int(os.getenv("MYSQL_PORT", "3306"))
+    MYSQL_USER: str = os.getenv("MYSQL_USER", "devuser").strip()
+    MYSQL_PASSWORD: str = os.getenv("MYSQL_PASSWORD", "devpass123!").strip()
+    MYSQL_DATABASE: str = os.getenv("MYSQL_DATABASE", "youtube_converter").strip()
+
     # Server Protocol (Port 8010 to avoid conflict with AuctionRadar on Port 8000)
     HOST: str = os.getenv("HOST", "0.0.0.0")
     PORT: int = int(os.getenv("PORT", "8010"))
