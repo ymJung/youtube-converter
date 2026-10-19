@@ -14,6 +14,8 @@ from app.converter import (
     extract_video_metadata,
     format_file_size,
     is_valid_youtube_url,
+    normalize_all_completed_jobs,
+    normalize_existing_job,
     process_queued_job,
     sanitize_filename,
 )
@@ -139,6 +141,7 @@ async def get_server_protocol() -> Dict[str, Any]:
             "summarizer": "Gemini 2.5 Flash (structured Korean summary + timeline)",
             "js_runtime": "deno (local binary)",
             "transcoder": "FFmpeg 7.0.2-static (libmp3lame / h264+aac)",
+            "audio_normalizer": "FFmpeg EBU R128 2-Pass loudnorm (-16.0 LUFS, TP -1.5 dBTP) + dynaudnorm",
             "telegram_bot": "TELEGRAM_BOT_3 (@soracrabsss_bot - 소라크랩bot)",
             "telegram_poller_running": bot3_poller.running,
         },
@@ -151,12 +154,14 @@ async def get_server_protocol() -> Dict[str, Any]:
             "GET /api/notes/{note_id}/markdown": "스크립트 정리 노트 마크다운(.md) 파일 다운로드",
             "DELETE /api/notes/{note_id}": "저장된 스크립트 정리 노트 삭제",
             "POST /api/telegram/send-note/{note_id}": "정리된 스크립트 노트를 TELEGRAM_BOT_3로 전송",
-            "POST /api/convert/enqueue": "DB 중복 확인 후 미변환 영상만 비동기 변환 대기열(큐)에 등록",
+            "POST /api/convert/enqueue": "DB 중복 확인 후 미변환 영상만 비동기 변환 대기열(큐)에 등록 (기본 -16 LUFS 음량 균일화)",
             "GET /api/queue": "실시간 변환 대기열(queued/downloading/converting) 및 최근 작업 상태 조회",
-            "POST /api/convert": "DB 중복 확인 후 MP3(320/192/128kbps) 또는 MP4(best/1080p/720p/480p/360p) 변환",
+            "POST /api/convert": "DB 중복 확인 후 MP3(320/192/128kbps) 또는 MP4(best/1080p/720p/480p/360p) 변환 및 음량 균일화",
             "GET /api/convert/direct?url={youtube_url}&format={mp3|mp4}&quality={...}": "브라우저/curl 원클릭 즉시 변환 & 파일 다운로드",
             "GET /api/jobs": "전체 변환 작업 내역 조회",
             "GET /api/jobs/{job_id}": "단일 변환 작업 상태 조회",
+            "POST /api/jobs/{job_id}/normalize": "단일 MP3/MP4 파일 음량 균일화 (-16 LUFS 방송 표준 보정)",
+            "POST /api/jobs/normalize-all": "보관된 전체 MP3/MP4 파일 일괄 음량 균일화 (-16 LUFS 맞춤)",
             "GET /api/jobs/{job_id}/download": "변환 완료된 MP3/MP4 파일 다운로드 및 스트리밍",
             "DELETE /api/jobs/{job_id}": "변환 작업 및 로컬 미디어 파일 삭제",
             "POST /api/telegram/menu": "TELEGRAM_BOT_3(@soracrabsss_bot)로 대화형 앱 버튼 & 노트 보관함 호출",
@@ -322,9 +327,16 @@ async def convert_and_download_direct(
     url: str = Query(..., description="유튜브 링크"),
     format: Literal["mp3", "mp4"] = Query(default="mp3", description="mp3 또는 mp4"),
     quality: str = Query(default="192", description="MP3: 320/192/128, MP4: best/1080p/720p/480p/360p"),
+    normalize: bool = Query(default=True, description="EBU R128 (-16 LUFS) 음량 균일화 적용 여부"),
 ) -> FileResponse:
     """쿼리스트링 하나로 DB 중복 확인 후 변환된 MP3/MP4 파일을 응답으로 내려주는 엔드포인트"""
-    req = ConvertRequest(url=url, target_format=format, quality=quality, send_telegram=False)
+    req = ConvertRequest(
+        url=url,
+        target_format=format,
+        quality=quality,
+        normalize_audio=normalize,
+        send_telegram=False,
+    )
     if not is_valid_youtube_url(req.url):
         raise HTTPException(status_code=400, detail="유효한 유튜브 링크가 아닙니다.")
     try:
@@ -340,6 +352,43 @@ async def list_jobs(
     target_format: Optional[str] = Query(default=None, description="mp3 또는 mp4 필터"),
 ) -> List[ConversionJob]:
     return load_all_jobs(target_format=target_format, limit=100)
+
+
+@app.post("/api/jobs/normalize-all")
+async def normalize_all_jobs_endpoint(
+    target_lufs: float = Query(default=-16.0, description="목표 통합 음량 (LUFS, 기본 -16.0)"),
+    force_all: bool = Query(default=False, description="이미 보정된 파일도 재보정 여부"),
+) -> Dict[str, Any]:
+    """보관된 완료 상태의 MP3/MP4 미디어 파일들을 일괄 음량 균일화(-16 LUFS)"""
+    try:
+        updated = await asyncio.to_thread(
+            normalize_all_completed_jobs,
+            target_lufs,
+            not force_all,
+        )
+        return {
+            "ok": True,
+            "target_lufs": target_lufs,
+            "normalized_count": len(updated),
+            "jobs": updated,
+        }
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"일괄 음량 균일화 실패: {exc}") from exc
+
+
+@app.post("/api/jobs/{job_id}/normalize", response_model=ConversionJob)
+async def normalize_single_job_endpoint(
+    job_id: str,
+    target_lufs: float = Query(default=-16.0, description="목표 통합 음량 (LUFS, 기본 -16.0)"),
+) -> ConversionJob:
+    """특정 MP3/MP4 변환 작업의 오디오 음량을 방송 표준(-16 LUFS)으로 균일화"""
+    try:
+        job = await asyncio.to_thread(normalize_existing_job, job_id, target_lufs)
+        return job
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"음량 균일화 실패: {exc}") from exc
 
 
 @app.get("/api/jobs/{job_id}", response_model=ConversionJob)

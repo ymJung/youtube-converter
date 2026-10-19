@@ -250,9 +250,13 @@ def build_jobs_list_view(mode: str = "all") -> tuple[str, Dict[str, Any]]:
         for idx, j in enumerate(jobs, 1):
             badge = "🎵 MP3" if j.target_format == "mp3" else "🎬 MP4"
             qual = f"{j.quality}kbps" if j.target_format == "mp3" else j.quality
+            norm_info = ""
+            if j.audio_normalized and j.original_lufs is not None and j.normalized_lufs is not None:
+                sign = "+" if (j.gain_db or 0) >= 0 else ""
+                norm_info = f" · 🔊 <b>{j.original_lufs}→{j.normalized_lufs}LUFS ({sign}{j.gain_db}dB)</b>"
             lines.append(
                 f"\n<b>{idx}. [{badge} · {qual}] {html.escape(j.title)}</b>\n"
-                f"👤 {html.escape(j.uploader)} ({j.duration_str}) · 📦 <b>{j.file_size_human}</b>"
+                f"👤 {html.escape(j.uploader)} ({j.duration_str}) · 📦 <b>{j.file_size_human}</b>{norm_info}"
             )
             if j.status == "completed":
                 buttons.append(
@@ -359,12 +363,20 @@ async def send_telegram_conversion_alert(
     fmt_badge = "🎵 MP3 오디오" if job.target_format == "mp3" else "🎬 MP4 비디오"
     qual_str = f"{job.quality}kbps" if job.target_format == "mp3" else job.quality
 
+    loud_line = "🔊 <b>음량 균일화:</b> EBU R128 표준 적용\n"
+    if job.audio_normalized and job.original_lufs is not None and job.normalized_lufs is not None:
+        sign = "+" if (job.gain_db or 0) >= 0 else ""
+        loud_line = (
+            f"🔊 <b>음량 균일화:</b> <code>{job.original_lufs} LUFS → {job.normalized_lufs} LUFS ({sign}{job.gain_db}dB 자동 맞춤)</code>\n"
+        )
+
     caption = (
         f"✅ <b>[TubeShift] 유튜브 {fmt_badge} 변환 완료</b>\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
         f"📌 <b>제목:</b> {html.escape(job.title)}\n"
         f"👤 <b>채널:</b> {html.escape(job.uploader)} ({job.duration_str})\n"
         f"🎛 <b>포맷/품질:</b> {job.target_format.upper()} ({qual_str})\n"
+        f"{loud_line}"
         f"📦 <b>파일 크기:</b> {job.file_size_human}\n"
         f"🔗 <b>원본 링크:</b> {job.url}\n"
         f"📥 <b>웹 다운로드:</b> <a href=\"{download_link}\">파일 바로 받기</a>"

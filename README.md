@@ -29,8 +29,9 @@
 - **`GET /api/notes/{note_id}/markdown`** : 정리된 요약본과 전체 타임스탬프 대본을 마크다운(`.md`) 문서로 다운로드
 - **`DELETE /api/notes/{note_id}`** : 보관함 내 스크립트 정리 노트 삭제
 - **`POST /api/telegram/send-note/{note_id}`** : 보관된 스크립트 정리 노트를 `TELEGRAM_BOT_3`로 즉시 전송
-- **`POST /api/convert`** : JSON 바디(`url`, `target_format`: `"mp3"|"mp4"`, `quality`, `send_telegram`)를 받아 변환 수행 및 작업 레코드 반환
-- **`GET /api/convert/direct?url={youtube_url}&format={mp3|mp4}&quality={...}`** : 쿼리스트링 한 줄로 즉시 변환 후 바이너리 미디어 파일 다운로드
+- **`POST /api/convert`** : JSON 바디(`url`, `target_format`: `"mp3"|"mp4"`, `quality`, `normalize_audio=True`, `send_telegram`)를 받아 변환 및 방송 표준(`-16.0 LUFS` EBU R128 `loudnorm` + `dynaudnorm`) 음량 균일화 수행 후 작업 레코드 반환
+- **`GET /api/convert/direct?url={youtube_url}&format={mp3|mp4}&quality={...}`** : 쿼리스트링 한 줄로 즉시 변환 및 음량 균일화 후 바이너리 미디어 파일 다운로드
+- **`POST /api/jobs/{job_id}/normalize`** / **`POST /api/jobs/normalize-all`** : 이미 변환 완료된 단일 또는 전체 MP3/MP4 미디어 파일의 음량을 `-16.0 LUFS`로 균일화 보정
 - **`GET /api/jobs`** / **`GET /api/jobs/{job_id}`** / **`GET /api/jobs/{job_id}/download`** / **`DELETE /api/jobs/{job_id}`** : 미디어 변환 작업 관리
 - **`POST /api/telegram/menu`** : `TELEGRAM_BOT_3` (`@soracrabsss_bot`) 채팅방으로 하단 앱 키보드 및 정리 노트 보관함 호출
 - **`POST /api/telegram/send/{job_id}`** : 변환 완료된 MP3/MP4 파일을 텔레그램(`TELEGRAM_BOT_3`)으로 즉시 전송

@@ -172,10 +172,16 @@
           </div>
 
           <div class="rounded-xl bg-slate-950 border border-slate-800 p-3.5 flex flex-col justify-between gap-2">
-            <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
-              <input type="checkbox" id="send-telegram" checked class="rounded bg-slate-900 border-slate-700 text-emerald-500 focus:ring-0" />
-              <span>✈️ 완료 시 텔레그램 Bot 3(`@soracrabsss_bot`) 전송</span>
-            </label>
+            <div class="space-y-1.5">
+              <label class="flex items-center gap-2 text-xs text-emerald-300 font-semibold cursor-pointer">
+                <input type="checkbox" id="normalize-audio" checked class="rounded bg-slate-900 border-slate-700 text-emerald-500 focus:ring-0" />
+                <span>🔊 자동 음량 균일화 (-16 LUFS · 작은 소리 증폭 / 큰 소리 억제)</span>
+              </label>
+              <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
+                <input type="checkbox" id="send-telegram" checked class="rounded bg-slate-900 border-slate-700 text-emerald-500 focus:ring-0" />
+                <span>✈️ 완료 시 텔레그램 Bot 3(`@soracrabsss_bot`) 전송</span>
+              </label>
+            </div>
             <button type="submit" id="btn-convert"
               class="w-full py-2.5 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-sm font-extrabold text-white shadow-lg shadow-emerald-600/25 transition flex items-center justify-center gap-2">
               <span>📥</span> <span id="btn-convert-text">MP3 변환 대기열(큐)에 등록</span>
@@ -389,9 +395,15 @@
             🎬 MP4 비디오 ({{ stats.mp4_count }})
           </button>
         </div>
-        <span class="text-xs text-slate-400">
-          💡 브라우저 내장 오디오/비디오 플레이어로 바로 들어보거나 파일로 저장할 수 있습니다.
-        </span>
+        <div class="flex flex-wrap items-center gap-3">
+          <button onclick="normalizeAllJobs()" id="btn-norm-all"
+            class="px-3.5 py-2 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-xs font-bold text-amber-300 transition flex items-center gap-1.5">
+            <span>🔊</span> <span>보관 파일 전체 음량 균일화 (-16 LUFS 맞춤)</span>
+          </button>
+          <span class="text-xs text-slate-400">
+            💡 브라우저 내장 오디오/비디오 플레이어로 바로 들어보거나 파일로 저장할 수 있습니다.
+          </span>
+        </div>
       </div>
 
       {% if not all_jobs %}
@@ -445,6 +457,11 @@
                 <span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-800 text-amber-300">
                   📦 {{ job.file_size_human }}
                 </span>
+                {% if job.audio_normalized and job.original_lufs is not none and job.normalized_lufs is not none %}
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-500/20 text-purple-300 border border-purple-500/40">
+                  🔊 음량균일화 {{ job.original_lufs }} → {{ job.normalized_lufs }} LUFS ({{ '+' if (job.gain_db or 0) >= 0 else '' }}{{ job.gain_db }}dB)
+                </span>
+                {% endif %}
                 {% endif %}
               </div>
               <h3 class="text-base md:text-lg font-bold text-white">{{ job.title }}</h3>
@@ -461,6 +478,12 @@
               class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-xs md:text-sm font-bold text-white shadow-lg shadow-emerald-600/20 transition flex items-center gap-1.5">
               <span>📥</span> <span>{{ job.target_format | upper }} 다운로드</span>
             </a>
+            {% if not job.audio_normalized %}
+            <button onclick="normalizeSingleJob('{{ job.job_id }}')"
+              class="px-3.5 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-xs font-semibold text-amber-300 transition flex items-center gap-1">
+              <span>🔊</span> <span>음량 맞춤</span>
+            </button>
+            {% endif %}
             <button onclick="sendJobToTelegram('{{ job.job_id }}')"
               class="px-3.5 py-2 rounded-xl bg-sky-600/20 hover:bg-sky-600/30 border border-sky-500/40 text-xs font-semibold text-sky-300 transition flex items-center gap-1">
               <span>✈️</span> <span>텔레그램 전송</span>
@@ -720,6 +743,7 @@
       const url = document.getElementById('yt-url').value.trim();
       const target_format = document.getElementById('target-format').value;
       const quality = document.getElementById('quality-select').value;
+      const normalize_audio = document.getElementById('normalize-audio').checked;
       const send_telegram = document.getElementById('send-telegram').checked;
 
       const btn = document.getElementById('btn-convert');
@@ -732,7 +756,7 @@
         const res = await fetch('/api/convert/enqueue', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url, target_format, quality, send_telegram }),
+          body: JSON.stringify({ url, target_format, quality, normalize_audio, send_telegram }),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.detail || '변환 큐 등록 실패');
@@ -780,6 +804,36 @@
       } finally {
         btn.disabled = false;
         btnText.textContent = `${target_format.toUpperCase()} 변환 대기열(큐)에 등록`;
+      }
+    }
+
+    async function normalizeSingleJob(jobId) {
+      showToast('🔊 FFmpeg EBU R128(-16 LUFS) 음량 균일화를 진행 중입니다...', false, true);
+      try {
+        const res = await fetch(`/api/jobs/${jobId}/normalize`, { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || '음량 균일화 실패');
+        showToast(`✅ [${data.title}] 음량 균일화 완료 (${data.original_lufs} → ${data.normalized_lufs} LUFS)!`);
+        setTimeout(() => window.location.reload(), 800);
+      } catch (err) {
+        showToast(`❌ 음량 균일화 실패: ${err.message}`, true);
+      }
+    }
+
+    async function normalizeAllJobs() {
+      const btn = document.getElementById('btn-norm-all');
+      if (btn) btn.disabled = true;
+      showToast('🔊 보관된 모든 MP3/MP4 파일들의 음량을 방송 표준(-16 LUFS)으로 일괄 균일화하고 있습니다...', false, true);
+      try {
+        const res = await fetch('/api/jobs/normalize-all', { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || '일괄 음량 균일화 실패');
+        showToast(`✅ 총 ${data.normalized_count}건의 미디어 파일 음량을 -16 LUFS로 균일화 완료했습니다!`);
+        setTimeout(() => window.location.reload(), 900);
+      } catch (err) {
+        showToast(`❌ 일괄 음량 균일화 실패: ${err.message}`, true);
+      } finally {
+        if (btn) btn.disabled = false;
       }
     }
 

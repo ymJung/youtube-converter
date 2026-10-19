@@ -32,6 +32,14 @@ class ConvertRequest(BaseModel):
         default="192",
         description="MP3 비트레이트(320/192/128) 또는 MP4 해상도(best/1080p/720p/480p/360p)",
     )
+    normalize_audio: bool = Field(
+        default=True,
+        description="소리가 너무 작거나 큰 영상을 방송/스트리밍 표준(-16 LUFS)으로 전체 음량 균일화 여부",
+    )
+    target_lufs: float = Field(
+        default=-16.0,
+        description="목표 통합 음량(LUFS, 기본값 -16.0 LUFS)",
+    )
     send_telegram: bool = Field(default=False, description="변환 완료 후 텔레그램 알림/전송 여부")
     force_reconvert: bool = Field(default=False, description="DB에 이미 변환된 항목이 있어도 강제 재변환 여부")
 
@@ -52,6 +60,12 @@ class ConversionJob(BaseModel):
     queue_position: int = 0
     is_cached: bool = False
     already_in_queue: bool = False
+    normalize_audio: bool = True
+    audio_normalized: bool = False
+    target_lufs: float = -16.0
+    original_lufs: Optional[float] = None
+    normalized_lufs: Optional[float] = None
+    gain_db: Optional[float] = None
     file_name: str = ""
     file_path: str = ""
     file_size_bytes: int = 0

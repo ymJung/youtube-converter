@@ -111,12 +111,15 @@ def test_convert_mp3_and_mp4_end_to_end() -> None:
             "url": SAMPLE_URL,
             "target_format": "mp3",
             "quality": "128",
+            "normalize_audio": True,
             "send_telegram": False,
         },
     )
     assert res_mp3.status_code == 200
     job_mp3 = res_mp3.json()
     assert job_mp3["status"] == "completed"
+    assert job_mp3["audio_normalized"] is True
+    assert job_mp3["normalized_lufs"] is not None
     assert Path(job_mp3["file_path"]).exists()
 
     res_mp4 = client.post(
@@ -125,10 +128,13 @@ def test_convert_mp3_and_mp4_end_to_end() -> None:
             "url": SAMPLE_URL,
             "target_format": "mp4",
             "quality": "360p",
+            "normalize_audio": True,
             "send_telegram": False,
         },
     )
     assert res_mp4.status_code == 200
     job_mp4 = res_mp4.json()
     assert job_mp4["status"] == "completed"
+    assert job_mp4["audio_normalized"] is True
+    assert job_mp4["normalized_lufs"] is not None
     assert Path(job_mp4["file_path"]).exists()
